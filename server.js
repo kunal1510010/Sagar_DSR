@@ -71,7 +71,7 @@ app.get("/api/bootstrap", auth, async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
 
   // roster scoped
-  let rosterSQL = "SELECT code,name,tl,loc FROM roster", rp = [];
+  let rosterSQL = "SELECT code,name,tl,loc,designation FROM roster", rp = [];
   if (me.role === "tl") { rp.push(me.tl); rosterSQL += ` WHERE tl=$1`; }
   if (me.role === "sales") { rp.push(me.cp); rosterSQL += ` WHERE name=$1`; }
   rosterSQL += " ORDER BY loc,tl,name";
@@ -85,7 +85,7 @@ app.get("/api/bootstrap", auth, async (req, res) => {
     q(`SELECT * FROM stock WHERE to_char(date,'YYYY-MM')=$1 ORDER BY date DESC`, [month]),
     q("SELECT * FROM offers ORDER BY title"),
     q("SELECT code,status FROM attendance WHERE date=$1", [today]),
-    me.role === "admin" ? q("SELECT id,username,name,role,tl,cp,loc FROM users ORDER BY role,username") : Promise.resolve({ rows: [] }),
+    me.role === "admin" ? q("SELECT id,username,name,role,tl,cp,loc,designation FROM users ORDER BY role,username") : Promise.resolve({ rows: [] }),
   ]);
   res.json({
     roster: roster.rows,
@@ -174,18 +174,18 @@ app.post("/api/attendance/bulk", auth, async (req, res) => {
 /* ---------------- ROSTER (admin) ---------------- */
 app.post("/api/roster", auth, adminOnly, async (req, res) => {
   const b = req.body;
-  const { rows } = await q("INSERT INTO roster(code,name,tl,loc) VALUES($1,$2,$3,$4) RETURNING *", [b.code, b.name, b.tl, b.loc]);
+  const { rows } = await q("INSERT INTO roster(code,name,tl,loc,designation) VALUES($1,$2,$3,$4,$5) RETURNING *", [b.code, b.name, b.tl, b.loc, b.designation||null]);
   res.json(rows[0]);
 });
 app.post("/api/roster/bulk", auth, adminOnly, async (req, res) => {
   for (const r of (req.body.rows || []))
-    await q("INSERT INTO roster(code,name,tl,loc) VALUES($1,$2,$3,$4)", [r.code, r.name, r.tl, r.loc]);
-  const { rows } = await q("SELECT code,name,tl,loc FROM roster ORDER BY loc,tl,name");
+    await q("INSERT INTO roster(code,name,tl,loc,designation) VALUES($1,$2,$3,$4,$5)", [r.code, r.name, r.tl, r.loc, r.designation||null]);
+  const { rows } = await q("SELECT code,name,tl,loc,designation FROM roster ORDER BY loc,tl,name");
   res.json(rows);
 });
 app.put("/api/roster/:code", auth, adminOnly, async (req, res) => {
   const b = req.body;
-  await q("UPDATE roster SET code=$1,name=$2,tl=$3,loc=$4 WHERE code=$5", [b.code, b.name, b.tl, b.loc, req.params.code]);
+  await q("UPDATE roster SET code=$1,name=$2,tl=$3,loc=$4,designation=$5 WHERE code=$6", [b.code, b.name, b.tl, b.loc, b.designation||null, req.params.code]);
   res.json({ ok: true });
 });
 app.delete("/api/roster/:code", auth, adminOnly, async (req, res) => { await q("DELETE FROM roster WHERE code=$1", [req.params.code]); res.json({ ok: true }); });
@@ -206,16 +206,16 @@ app.delete("/api/offers/:id", auth, async (req, res) => { await q("DELETE FROM o
 /* ---------------- USERS (admin) ---------------- */
 app.post("/api/users", auth, adminOnly, async (req, res) => {
   const b = req.body;
-  await q("INSERT INTO users(username,pin_hash,name,role,tl,cp,loc) VALUES($1,$2,$3,$4,$5,$6,$7)",
-    [b.u.toLowerCase(), hashPin(b.p), b.name, b.role, b.tl || null, b.cp || null, b.loc || "All"]);
+  await q("INSERT INTO users(username,pin_hash,name,role,tl,cp,loc,designation) VALUES($1,$2,$3,$4,$5,$6,$7,$8)",
+    [b.u.toLowerCase(), hashPin(b.p), b.name, b.role, b.tl || null, b.cp || null, b.loc || "All", b.designation || null]);
   res.json({ ok: true });
 });
 app.put("/api/users/:id", auth, adminOnly, async (req, res) => {
   const b = req.body;
-  if (b.p) await q("UPDATE users SET username=$1,pin_hash=$2,name=$3,role=$4,tl=$5,cp=$6,loc=$7 WHERE id=$8",
-    [b.u.toLowerCase(), hashPin(b.p), b.name, b.role, b.tl || null, b.cp || null, b.loc || "All", req.params.id]);
-  else await q("UPDATE users SET username=$1,name=$3,role=$4,tl=$5,cp=$6,loc=$7 WHERE id=$8",
-    [b.u.toLowerCase(), null, b.name, b.role, b.tl || null, b.cp || null, b.loc || "All", req.params.id]);
+  if (b.p) await q("UPDATE users SET username=$1,pin_hash=$2,name=$3,role=$4,tl=$5,cp=$6,loc=$7,designation=$8 WHERE id=$9",
+    [b.u.toLowerCase(), hashPin(b.p), b.name, b.role, b.tl || null, b.cp || null, b.loc || "All", b.designation || null, req.params.id]);
+  else await q("UPDATE users SET username=$1,name=$3,role=$4,tl=$5,cp=$6,loc=$7,designation=$8 WHERE id=$9",
+    [b.u.toLowerCase(), null, b.name, b.role, b.tl || null, b.cp || null, b.loc || "All", b.designation || null, req.params.id]);
   res.json({ ok: true });
 });
 app.delete("/api/users/:id", auth, adminOnly, async (req, res) => { await q("DELETE FROM users WHERE id=$1", [req.params.id]); res.json({ ok: true }); });

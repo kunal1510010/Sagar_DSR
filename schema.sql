@@ -7,10 +7,14 @@ CREATE TABLE IF NOT EXISTS users (
   pin_hash  TEXT NOT NULL,           -- scrypt hash (never store raw PIN)
   name      TEXT NOT NULL,
   role      TEXT NOT NULL CHECK (role IN ('admin','tl','sales')),
-  tl        TEXT,                    -- team-leader scope (role=tl)
-  cp        TEXT,                    -- sales-person scope (role=sales)
-  loc       TEXT DEFAULT 'All'
+  tl          TEXT,                    -- team-leader scope (role=tl)
+  cp          TEXT,                    -- sales-person scope (role=sales)
+  loc         TEXT DEFAULT 'All',
+  designation TEXT
 );
+
+ALTER TABLE users ADD COLUMN IF NOT EXISTS designation TEXT;
+ALTER TABLE roster ADD COLUMN IF NOT EXISTS designation TEXT;
 
 CREATE TABLE IF NOT EXISTS roster (
   id    SERIAL PRIMARY KEY,
