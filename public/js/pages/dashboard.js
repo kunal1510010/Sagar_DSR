@@ -25,7 +25,6 @@ export function renderDash(){
     <div class="kpi"><div class="lab">Paid / Car</div><div class="val">${fmtINR(a.paidPerCar)}</div><div class="sub">average revenue</div></div>
     <div class="kpi bad"><div class="lab">Zero Cars</div><div class="val">${a.zero}</div><div class="sub">${fmtN(a.zeroPct)}% of deliveries</div></div>
     <div class="kpi warn"><div class="lab">Extended Warranty</div><div class="val">${a.ew}</div><div class="sub">EW attached</div></div>
-    <div class="kpi"><div class="lab">Present Today</div><div class="val">${att.present}/${att.total}</div><div class="sub">${att.total?fmtN(att.present/att.total*100):0}% attendance</div></div>
   </div>
 
   <div class="row2">
@@ -40,16 +39,7 @@ export function renderDash(){
         </tr>`).join(""):`<tr><td colspan=5 class="empty"><b>No sales yet</b>Add entries under Daily Sales</td></tr>`}</tbody>
       </table></div></div>
     </div>
-    <div class="panel">
-      <div class="ph"><h3>🔴 Red-Zone Teams</h3><div class="ph-r"><span class="tag bad">≥40% zero cars</span></div></div>
-      <div class="pb flush"><div class="tblwrap"><table>
-        <thead><tr><th>Team Leader</th><th>Cars</th><th>Zero</th><th>Zero %</th></tr></thead>
-        <tbody>${redZone.length?redZone.map(t=>`<tr>
-          <td><b>${esc(t.tl)}</b></td><td class="num">${t.cars}</td><td class="num">${t.zero}</td>
-          <td><span class="tag bad">${fmtN(t.zeroPct)}%</span></td></tr>`).join("")
-          :`<tr><td colspan=4 class="empty"><b>No red-zone teams 🎉</b>All teams under the 40% threshold</td></tr>`}</tbody>
-      </table></div></div>
-    </div>
+    
   </div>
 
   <div class="panel" style="margin-top:16px">
