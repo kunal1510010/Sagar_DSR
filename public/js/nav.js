@@ -63,8 +63,11 @@ export function monthLabel(mk){
   return new Date(y, m-1, 1).toLocaleString("en-US", {month:"long", year:"numeric"});
 }
 
-export function go(id){
+export const PAGE_IDS = new Set(['dash','sales','stock','attend','reports','zero','offers','roster','users']);
+
+export function go(id, {push=true}={}){
   app.PAGE = id;
+  if(push) history.pushState({page:id}, '', '/'+id);
   document.querySelectorAll(".navitem").forEach(b => b.classList.toggle("active", b.dataset.id===id));
   const titles = {
     dash:    ["Dashboard",            "Group overview · "+monthLabel(app.CURMONTH)],
@@ -84,6 +87,12 @@ export function go(id){
   if(_renderers[id]) _renderers[id]();
   window.scrollTo(0,0);
 }
+
+window.addEventListener('popstate', e => {
+  if(!app.ME) return;
+  const page = e.state?.page;
+  go(PAGE_IDS.has(page) ? page : 'dash', {push: false});
+});
 
 export function locFilterCtl(){
   if(app.ME.role==="sales") return "";

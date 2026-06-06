@@ -2,10 +2,10 @@ import { app } from './state.js';
 import { esc, initials, monthKey, today } from './utils.js';
 import { api, loadBootstrap } from './api.js';
 import { closeModal } from './modal.js';
-import { go, buildNav, registerRenderer, monthLabel, setLoc, setMonth } from './nav.js';
+import { go, buildNav, registerRenderer, monthLabel, setLoc, setMonth, PAGE_IDS } from './nav.js';
 
 import { renderDash }     from './pages/dashboard.js';
-import { renderSales, renderSalesTable, openSaleForm, onCpPick, onPaidChange, onFocChange, onFocReasonChange, saveSale } from './pages/sales.js';
+import { renderSales, renderSalesTable, openSaleForm, onCpPick, onPaidChange, onFocChange, onFocReasonChange, onZeroReasonChange, saveSale, exportSales } from './pages/sales.js';
 import { renderStock, renderStockTbl, openStockForm, onKind, saveStock }                 from './pages/stock.js';
 import { renderAttend, statusColor, mark, markAll }                                       from './pages/attendance.js';
 import { renderReports, renderRepTable, exportReport }                                    from './pages/reports.js';
@@ -46,9 +46,11 @@ window.closeModal = closeModal;
 window.renderSalesTable  = renderSalesTable;
 window.openSaleForm      = openSaleForm;
 window.onCpPick          = onCpPick;
-window.onPaidChange      = onPaidChange;
-window.onFocChange       = onFocChange;
-window.onFocReasonChange = onFocReasonChange;
+window.onPaidChange       = onPaidChange;
+window.onFocChange        = onFocChange;
+window.onFocReasonChange  = onFocReasonChange;
+window.onZeroReasonChange = onZeroReasonChange;
+window.exportSales        = exportSales;
 
 // stock
 window.renderStockTbl = renderStockTbl;
@@ -108,7 +110,10 @@ async function startSession(user){
   document.querySelector("#uav").textContent  = initials(user.name);
   document.querySelector("#url").textContent  = {admin:"Manager · Admin",tl:"Team Leader",sales:"Sales / CA"}[user.role];
   document.querySelector("#period").textContent = monthLabel(app.CURMONTH);
-  buildNav(); go("dash");
+  const urlPage = window.location.pathname.slice(1);
+  const initPage = PAGE_IDS.has(urlPage) ? urlPage : 'dash';
+  history.replaceState({page: initPage}, '', '/'+initPage);
+  buildNav(); go(initPage, {push: false});
 }
 
 async function doLogin(){
@@ -128,13 +133,18 @@ async function doLogin(){
 
 async function tryResume(){
   if(!app.TOKEN) return;
+  document.querySelector("#login").classList.add("hide");
   try{ const {user} = await api("/me"); await startSession(user); }
-  catch(e){ app.TOKEN=null; localStorage.removeItem("sm_token"); }
+  catch(e){
+    app.TOKEN=null; localStorage.removeItem("sm_token");
+    document.querySelector("#login").classList.remove("hide");
+  }
 }
 
 function logout(){
   app.ME = null; app.TOKEN = null;
   localStorage.removeItem("sm_token");
+  history.replaceState({}, '', '/');
   document.querySelector("#app").classList.add("hide");
   document.querySelector("#login").classList.remove("hide");
   document.querySelector("#lp").value = "";

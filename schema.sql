@@ -15,13 +15,15 @@ CREATE TABLE IF NOT EXISTS users (
 
 ALTER TABLE users ADD COLUMN IF NOT EXISTS designation TEXT;
 ALTER TABLE roster ADD COLUMN IF NOT EXISTS designation TEXT;
+ALTER TABLE roster ADD COLUMN IF NOT EXISTS dms_id     TEXT;
 
 CREATE TABLE IF NOT EXISTS roster (
-  id    SERIAL PRIMARY KEY,
-  code  TEXT,
-  name  TEXT NOT NULL,
-  tl    TEXT,
-  loc   TEXT
+  id     SERIAL PRIMARY KEY,
+  code   TEXT,
+  name   TEXT NOT NULL,
+  tl     TEXT,
+  loc    TEXT,
+  dms_id TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_roster_tl  ON roster(tl);
 CREATE INDEX IF NOT EXISTS idx_roster_loc ON roster(loc);
@@ -45,12 +47,16 @@ CREATE TABLE IF NOT EXISTS sales (
   ew          BOOLEAN DEFAULT false,
   zero        BOOLEAN DEFAULT false,
   zero_reason TEXT,
-  foc_reason  TEXT
+  foc_reason  TEXT,
+  vas_name    TEXT,
+  vas_billing NUMERIC DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(date);
 CREATE INDEX IF NOT EXISTS idx_sales_tl   ON sales(tl);
 CREATE INDEX IF NOT EXISTS idx_sales_cp   ON sales(cp);
-ALTER TABLE sales ADD COLUMN IF NOT EXISTS foc_reason TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS foc_reason  TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS vas_name    TEXT;
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS vas_billing NUMERIC DEFAULT 0;
 
 CREATE TABLE IF NOT EXISTS stock (
   id                TEXT PRIMARY KEY,

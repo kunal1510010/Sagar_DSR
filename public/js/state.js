@@ -46,9 +46,9 @@ export const can = {
 export function monthSales(){ return visibleSales().filter(s=>monthKey(s.date)===app.CURMONTH); }
 
 export function agg(rows){
-  let cars=rows.length, paid=0, foc=0, zero=0, ew=0;
-  rows.forEach(s=>{ paid+=+s.paid||0; foc+=+s.foc||0; if(s.zero)zero++; if(s.ew)ew++; });
-  return {cars, paid, foc, total:paid+foc, zero, ew, paidPerCar:cars?paid/cars:0, zeroPct:cars?zero/cars*100:0};
+  let cars=rows.length, paid=0, foc=0, zero=0, ew=0, vasBilling=0;
+  rows.forEach(s=>{ paid+=+s.paid||0; foc+=+s.foc||0; vasBilling+=+s.vasBilling||0; if(s.zero)zero++; if(s.ew)ew++; });
+  return {cars, paid, foc, total:paid+foc, zero, ew, vasBilling, paidPerCar:cars?paid/cars:0, zeroPct:cars?zero/cars*100:0};
 }
 
 export function groupBy(rows, key){

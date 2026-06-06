@@ -33,12 +33,12 @@ export async function renderAttend(){
     <div class="kpi"><div class="lab">Marked</div><div class="val">${marked}/${ros.length}</div></div>
   </div>
   <div class="panel"><div class="pb flush"><div class="tblwrap"><table>
-    <thead><tr><th>Code</th><th>Sales Person</th><th>Designation</th><th>Team Leader</th><th>Location</th><th>Status</th></tr></thead>
+    <thead><tr><th>Code</th><th>DMS ID</th><th>Sales Person</th><th>Designation</th><th>Team Leader</th><th>Location</th><th>Status</th></tr></thead>
     <tbody>${ros.length?ros.map(r=>`<tr>
-      <td class="num">${esc(r.code)}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.designation||"—")}</td><td>${esc(r.tl)}</td><td>${esc(r.loc)}</td>
+      <td class="num">${esc(r.code)}</td><td class="num">${esc(r.dms_id||"—")}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.designation||"—")}</td><td>${esc(r.tl)}</td><td>${esc(r.loc)}</td>
       <td><select onchange="mark('${esc(r.code)}',this.value)" style="padding:6px 9px;border:1.5px solid var(--line);border-radius:8px;${statusColor(status(r.code))}">
         <option value="">—</option>${ATT_STATUS.map(s=>`<option ${status(r.code)===s?"selected":""}>${s}</option>`).join("")}</select></td>
-    </tr>`).join(""):`<tr><td colspan=6 class="empty"><b>No team members</b>Add people under Roster / Teams</td></tr>`}</tbody>
+    </tr>`).join(""):`<tr><td colspan=7 class="empty"><b>No team members</b>Add people under Roster / Teams</td></tr>`}</tbody>
   </table></div></div></div>`;
 }
 

@@ -71,7 +71,7 @@ app.get("/api/bootstrap", auth, async (req, res) => {
   const today = new Date().toISOString().slice(0, 10);
 
   // roster scoped
-  let rosterSQL = "SELECT code,name,tl,loc,designation FROM roster", rp = [];
+  let rosterSQL = "SELECT code,name,tl,loc,designation,dms_id FROM roster", rp = [];
   if (me.role === "tl") { rp.push(me.tl); rosterSQL += ` WHERE tl=$1`; }
   if (me.role === "sales") { rp.push(me.cp); rosterSQL += ` WHERE name=$1`; }
   rosterSQL += " ORDER BY loc,tl,name";
@@ -109,7 +109,8 @@ const dt = (x) => {
 const mapSale = (r) => ({ id: r.id, date: d(r.date), loc: r.loc, model: r.model, chassis: r.chassis,
   customer: r.customer, phone: r.phone, cp: r.cp, tl: r.tl, saleType: r.sale_type, accWork: r.acc_work,
   bookNo: r.book_no, paid: +r.paid, foc: +r.foc, total: +r.total, ew: r.ew, zero: r.zero,
-  zeroReason: r.zero_reason || "", focReason: r.foc_reason || "" });
+  zeroReason: r.zero_reason || "", focReason: r.foc_reason || "",
+  vasName: r.vas_name || "", vasBilling: +r.vas_billing || 0 });
 const mapStock = (r) => ({ id: r.id, kind: r.kind, date: dt(r.date), from: r.src, to: r.dst, partNo: r.part_no,
   desc: r.descr, qty: r.qty, accW: r.acc_w, cate: r.cate, remarks: r.remarks,
   location: r.location || "", partOrderDesc: r.part_order_desc || "", deliveryStatus: r.delivery_status || "No" });
@@ -124,17 +125,19 @@ function saleParams(b, id) {
   const paid = +b.paid || 0, foc = +b.foc || 0;
   return [id, b.date, b.loc, b.model, b.chassis, b.customer, b.phone, b.cp, b.tl, b.saleType,
     b.accWork, b.bookNo, paid, foc, paid + foc, !!b.ew, paid === 0, paid === 0 ? (b.zeroReason || "") : null,
-    foc > 0 ? (b.focReason || null) : null];
+    foc > 0 ? (b.focReason || null) : null,
+    b.vasName || null, +b.vasBilling || 0];
 }
 app.post("/api/sales", auth, async (req, res) => {
   const id = req.body.id || uid();
-  const { rows } = await q(`INSERT INTO sales(id,date,loc,model,chassis,customer,phone,cp,tl,sale_type,acc_work,book_no,paid,foc,total,ew,zero,zero_reason,foc_reason)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`, saleParams(req.body, id));
+  const { rows } = await q(`INSERT INTO sales(id,date,loc,model,chassis,customer,phone,cp,tl,sale_type,acc_work,book_no,paid,foc,total,ew,zero,zero_reason,foc_reason,vas_name,vas_billing)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21) RETURNING *`, saleParams(req.body, id));
   res.json(mapSale(rows[0]));
 });
 app.put("/api/sales/:id", auth, async (req, res) => {
   const { rows } = await q(`UPDATE sales SET date=$2,loc=$3,model=$4,chassis=$5,customer=$6,phone=$7,cp=$8,tl=$9,
-    sale_type=$10,acc_work=$11,book_no=$12,paid=$13,foc=$14,total=$15,ew=$16,zero=$17,zero_reason=$18,foc_reason=$19 WHERE id=$1 RETURNING *`,
+    sale_type=$10,acc_work=$11,book_no=$12,paid=$13,foc=$14,total=$15,ew=$16,zero=$17,zero_reason=$18,foc_reason=$19,
+    vas_name=$20,vas_billing=$21 WHERE id=$1 RETURNING *`,
     saleParams(req.body, req.params.id));
   if (!rows[0]) return res.status(404).json({ error: "Not found" });
   res.json(mapSale(rows[0]));
@@ -185,18 +188,18 @@ app.post("/api/attendance/bulk", auth, async (req, res) => {
 /* ---------------- ROSTER (admin) ---------------- */
 app.post("/api/roster", auth, adminOnly, async (req, res) => {
   const b = req.body;
-  const { rows } = await q("INSERT INTO roster(code,name,tl,loc,designation) VALUES($1,$2,$3,$4,$5) RETURNING *", [b.code, b.name, b.tl, b.loc, b.designation||null]);
+  const { rows } = await q("INSERT INTO roster(code,name,tl,loc,designation,dms_id) VALUES($1,$2,$3,$4,$5,$6) RETURNING *", [b.code, b.name, b.tl, b.loc, b.designation||null, b.dmsId||null]);
   res.json(rows[0]);
 });
 app.post("/api/roster/bulk", auth, adminOnly, async (req, res) => {
   for (const r of (req.body.rows || []))
-    await q("INSERT INTO roster(code,name,tl,loc,designation) VALUES($1,$2,$3,$4,$5)", [r.code, r.name, r.tl, r.loc, r.designation||null]);
-  const { rows } = await q("SELECT code,name,tl,loc,designation FROM roster ORDER BY loc,tl,name");
+    await q("INSERT INTO roster(code,name,tl,loc,designation,dms_id) VALUES($1,$2,$3,$4,$5,$6)", [r.code, r.name, r.tl, r.loc, r.designation||null, r.dmsId||null]);
+  const { rows } = await q("SELECT code,name,tl,loc,designation,dms_id FROM roster ORDER BY loc,tl,name");
   res.json(rows);
 });
 app.put("/api/roster/:code", auth, adminOnly, async (req, res) => {
   const b = req.body;
-  await q("UPDATE roster SET code=$1,name=$2,tl=$3,loc=$4,designation=$5 WHERE code=$6", [b.code, b.name, b.tl, b.loc, b.designation||null, req.params.code]);
+  await q("UPDATE roster SET code=$1,name=$2,tl=$3,loc=$4,designation=$5,dms_id=$6 WHERE code=$7", [b.code, b.name, b.tl, b.loc, b.designation||null, b.dmsId||null, req.params.code]);
   res.json({ ok: true });
 });
 app.delete("/api/roster/:code", auth, adminOnly, async (req, res) => { await q("DELETE FROM roster WHERE code=$1", [req.params.code]); res.json({ ok: true }); });

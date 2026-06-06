@@ -6,7 +6,7 @@ import { modal, closeModal } from '../modal.js';
 import { toast } from '../utils.js';
 
 export function renderRoster(){
-  const ros = app.DB.roster.filter(r=>!app.rosterSearch||(r.name+r.tl+r.loc+r.code+(r.designation||"")).toLowerCase().includes(app.rosterSearch));
+  const ros = app.DB.roster.filter(r=>!app.rosterSearch||(r.name+r.tl+r.loc+r.code+(r.designation||"")+(r.dms_id||"")).toLowerCase().includes(app.rosterSearch));
   const tls = new Set(app.DB.roster.map(r=>r.tl)).size;
   document.querySelector("#view").innerHTML=`
   <div class="grid cards" style="margin-bottom:16px">
@@ -22,9 +22,9 @@ export function renderRoster(){
     <button class="btn sm" onclick="openRosterForm()">+ Add person</button>
   </div>
   <div class="panel"><div class="pb flush"><div class="tblwrap"><table>
-    <thead><tr><th>Emp Code</th><th>Sales Person</th><th>Designation</th><th>Team Leader</th><th>Location</th><th></th></tr></thead>
+    <thead><tr><th>Emp Code</th><th>DMS ID</th><th>Sales Person</th><th>Designation</th><th>Team Leader</th><th>Location</th><th></th></tr></thead>
     <tbody>${ros.map(r=>`<tr>
-      <td class="num">${esc(r.code)}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.designation||"—")}</td><td>${esc(r.tl)}</td><td>${esc(r.loc)}</td>
+      <td class="num">${esc(r.code)}</td><td class="num">${esc(r.dms_id||"—")}</td><td><b>${esc(r.name)}</b></td><td>${esc(r.designation||"—")}</td><td>${esc(r.tl)}</td><td>${esc(r.loc)}</td>
       <td style="white-space:nowrap"><button class="btn tiny ghost" onclick="openRosterForm(${app.DB.roster.indexOf(r)})">Edit</button>
       <button class="btn tiny ghost" onclick="delRoster(${app.DB.roster.indexOf(r)})">✕</button></td>
     </tr>`).join("")}</tbody>
@@ -36,6 +36,7 @@ export function openRosterForm(idx){
   modal(`${r?"Edit":"Add"} Sales Person`,`
     <div class="formgrid ff">
       <div><label>Emp Code</label><input class="inp" id="r_code" value="${r?esc(r.code):""}"></div>
+      <div><label>DMS ID</label><input class="inp" id="r_dmsId" value="${r?esc(r.dms_id||""):""}"></div>
       <div><label>Name</label><input class="inp" id="r_name" value="${r?esc(r.name):""}"></div>
       <div><label>Team Leader</label><input class="inp" id="r_tl" list="tlList" value="${r?esc(r.tl):""}">
         <datalist id="tlList">${[...new Set(app.DB.roster.map(x=>x.tl))].map(t=>`<option>${esc(t)}</option>`).join("")}</datalist></div>
@@ -47,11 +48,12 @@ export function openRosterForm(idx){
     </div>`,[
     {label:"Cancel",cls:"ghost",fn:closeModal},
     {label:r?"Save":"Add",cls:"",fn:async()=>{
-      const rec={code:document.querySelector("#r_code").value.trim(),name:document.querySelector("#r_name").value.trim(),tl:document.querySelector("#r_tl").value.trim(),loc:document.querySelector("#r_loc").value,designation:document.querySelector("#r_designation").value||null};
+      const rec={code:document.querySelector("#r_code").value.trim(),dmsId:document.querySelector("#r_dmsId").value.trim()||null,name:document.querySelector("#r_name").value.trim(),tl:document.querySelector("#r_tl").value.trim(),loc:document.querySelector("#r_loc").value,designation:document.querySelector("#r_designation").value||null};
       if(!rec.name){ toast("Name required","bad"); return; }
+      rec.dms_id = rec.dmsId||null;
       try{
         if(idx>=0){ await api("/roster/"+encodeURIComponent(r.code),{method:"PUT",body:rec}); app.DB.roster[idx]=rec; }
-        else { await api("/roster",{method:"POST",body:rec}); app.DB.roster.push(rec); }
+        else { const saved=await api("/roster",{method:"POST",body:rec}); app.DB.roster.push(saved); }
       }catch(e){ toast(e.message,"bad"); return; }
       closeModal(); renderRoster(); toast("Saved","ok");
     }}

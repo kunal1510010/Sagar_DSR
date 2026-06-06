@@ -1,6 +1,6 @@
 import { app, can, monthSales } from '../state.js';
-import { esc, fmtINR, today, uid } from '../utils.js';
-import { MODELS, SALE_TYPES, ZERO_REASONS, FOC_REASONS } from '../constants.js';
+import { esc, fmtINR, today, uid, downloadText } from '../utils.js';
+import { MODELS, SALE_TYPES, ZERO_REASONS, FOC_REASONS, VAS_NAMES } from '../constants.js';
 import { api } from '../api.js';
 import { modal, closeModal } from '../modal.js';
 import { monthPicker, locFilterCtl, buildNav } from '../nav.js';
@@ -17,6 +17,7 @@ export function renderSales(){
     <div class="search"><svg width="15" height="15" viewBox="0 0 15 15"><circle cx="6" cy="6" r="4.5" fill="none" stroke="#888" stroke-width="1.4"/><path d="M10 10l4 4" stroke="#888" stroke-width="1.4"/></svg>
       <input class="inp" placeholder="Search customer, CA, chassis…" oninput="app.salesSearch=this.value.toLowerCase();renderSalesTable()"></div>
     <div class="spacer"></div>
+    <button class="btn sm ghost" onclick="exportSales()">⤓ Export CSV</button>
     ${can.enterSales()?`<button class="btn sm" onclick="openSaleForm()">+ New Delivery</button>`:""}
   </div>
   <div class="panel"><div class="pb flush" id="salesTbl"></div></div>`;
@@ -37,7 +38,7 @@ export function renderSalesTable(){
       <td><span class="tag gray">${esc(s.saleType)}</span></td>
       <td class="num">${fmtINR(s.paid)}</td><td class="num">${s.foc?fmtINR(s.foc):"—"}</td>
       <td class="num"><b>${fmtINR(s.total)}</b></td>
-      <td>${s.zero?`<span class="tag bad" title="${esc(s.zeroReason)}">ZERO</span>`:`<span class="tag ok">OK</span>`}${s.ew?` <span class="tag warn">EW</span>`:""}</td>
+      <td>${s.zero?`<span class="tag bad">ZERO</span>${s.zeroReason?`<div style="font-size:11px;color:var(--bad);margin-top:2px">${esc(s.zeroReason)}</div>`:""}`:`<span class="tag ok">OK</span>`}${s.ew?` <span class="tag warn">EW</span>`:""}</td>
       <td style="white-space:nowrap">
         ${can.enterSales()?`<button class="btn tiny ghost" onclick="openSaleForm('${s.id}')">Edit</button>`:""}
         <button class="btn tiny ghost" onclick="quickOffer('${s.id}')" title="Send offer">💬</button>
@@ -49,6 +50,10 @@ export function renderSalesTable(){
 export function openSaleForm(id){
   const s = id ? app.DB.sales.find(x=>x.id===id) : null;
   const rosterOpts = app.DB.roster.map(r=>`<option value="${esc(r.name)}" data-tl="${esc(r.tl)}" data-loc="${esc(r.loc)}" ${s&&s.cp===r.name?"selected":""}>${esc(r.name)}</option>`).join("");
+  // determine zero reason dropdown state for edit
+  const isOtherZero = s && s.zeroReason && !ZERO_REASONS.includes(s.zeroReason);
+  const zeroReasonSel = isOtherZero ? "Other - Manual Feed" : (s ? (s.zeroReason||"") : "");
+  const zeroOtherVal  = isOtherZero ? esc(s.zeroReason) : "";
   // determine FOC reason dropdown state for edit
   const isOtherFoc = s && s.focReason && !FOC_REASONS.includes(s.focReason);
   const focReasonSel = isOtherFoc ? "Other - Manual Feed" : (s ? (s.focReason||"") : "");
@@ -80,10 +85,21 @@ export function openSaleForm(id){
       <input class="inp" id="f_focOther" style="margin-top:8px;${focReasonSel==='Other - Manual Feed'?'':'display:none'}"
         placeholder="Describe the reason…" value="${focOtherVal}">
     </div>
+    <div class="formgrid ff" style="margin-top:14px">
+      <div><label>VAS Name</label><select id="f_vasName">
+        <option value="" ${!s||!s.vasName?'selected':''}>— None —</option>
+        ${VAS_NAMES.map(v=>`<option value="${esc(v)}" ${s&&s.vasName===v?'selected':''}>${esc(v)}</option>`).join("")}
+      </select></div>
+      <div><label>VAS Billing Amount (₹)</label><input class="inp" id="f_vasBilling" type="number" min="0" value="${s?s.vasBilling:0}"></div>
+    </div>
     <div id="zeroBlock" class="ff" style="margin-top:14px;${(s&&s.zero)?'':'display:none'}">
       <div class="section-note" style="background:var(--bad-soft);border-color:#f3c4c9;color:var(--bad)">
         ⚠️ Paid = ₹0 → this is a <b>Zero Car</b>. Select why no accessories were sold:</div>
-      <select id="f_zr">${ZERO_REASONS.map(r=>`<option ${s&&s.zeroReason===r?"selected":""}>${r}</option>`).join("")}</select>
+      <select id="f_zr" onchange="onZeroReasonChange()">
+        ${ZERO_REASONS.map(r=>`<option value="${esc(r)}" ${zeroReasonSel===r?'selected':''}>${esc(r)}</option>`).join("")}
+      </select>
+      <input class="inp" id="f_zrOther" style="margin-top:8px;${zeroReasonSel==='Other - Manual Feed'?'':'display:none'}"
+        placeholder="Describe the reason…" value="${zeroOtherVal}">
     </div>
   `,[
     {label:"Cancel",cls:"ghost",fn:closeModal},
@@ -114,19 +130,31 @@ export function onFocReasonChange(){
   document.querySelector("#f_focOther").style.display = (v==="Other - Manual Feed") ? "block" : "none";
 }
 
+export function onZeroReasonChange(){
+  const v = document.querySelector("#f_zr").value;
+  document.querySelector("#f_zrOther").style.display = (v==="Other - Manual Feed") ? "block" : "none";
+}
+
 export async function saveSale(id){
   const g = x => document.querySelector("#"+x).value;
   const paid = +g("f_paid")||0, foc = +g("f_foc")||0;
   if(!g("f_cust").trim()){ toast("Customer name is required","bad"); return; }
   const zero = paid===0;
+  const zeroReasonRaw = zero ? g("f_zr") : "";
+  const zeroReason = zero
+    ? (zeroReasonRaw==="Other - Manual Feed" ? g("f_zrOther").trim() : zeroReasonRaw)
+    : "";
   const focReasonRaw = g("f_focReason");
   const focReason = foc>0
     ? (focReasonRaw==="Other - Manual Feed" ? g("f_focOther").trim() : focReasonRaw)
     : "";
+  const vasName = g("f_vasName");
+  const vasBilling = +g("f_vasBilling")||0;
   const rec = { id:id||uid(), date:g("f_date"), model:g("f_model"), saleType:g("f_type"),
     cp:g("f_cp"), tl:g("f_tl"), loc:g("f_loc"), customer:g("f_cust").trim(), phone:g("f_phone").trim(),
     chassis:g("f_chassis").trim(), accWork:g("f_accw").trim(), bookNo:g("f_book").trim(),
-    paid, foc, total:paid+foc, ew:!!g("f_ew"), zero, zeroReason: zero? g("f_zr"):"", focReason };
+    paid, foc, total:paid+foc, ew:!!g("f_ew"), zero, zeroReason, focReason,
+    vasName, vasBilling };
   try{
     const saved = id ? await api("/sales/"+id,{method:"PUT",body:rec})
                      : await api("/sales",{method:"POST",body:rec});
@@ -135,4 +163,17 @@ export async function saveSale(id){
   }catch(e){ toast(e.message,"bad"); return; }
   closeModal(); renderSales(); buildNav();
   toast(id?"Delivery updated":"Delivery added"+(zero?" · flagged ZERO":""), zero?"":"ok");
+}
+
+export function exportSales(){
+  const rows = monthSales().slice().sort((a,b)=>b.date.localeCompare(a.date));
+  const cols = ["Date","Location","Model","Chassis No","Customer","Phone","CA","Team Leader",
+    "Sale Type","Acc Work No","Book No","Paid","FOC","Total","EW","Zero Car","Zero Reason",
+    "FOC Reason","VAS Name","VAS Billing"];
+  const csv = [cols, ...rows.map(s=>[
+    s.date, s.loc, s.model, s.chassis, s.customer, s.phone, s.cp, s.tl,
+    s.saleType, s.accWork, s.bookNo, s.paid, s.foc, s.total,
+    s.ew?"Yes":"No", s.zero?"Yes":"No", s.zeroReason, s.focReason, s.vasName, s.vasBilling
+  ])].map(r=>r.map(v=>`"${(v??'').toString().replace(/"/g,'""')}"`).join(",")).join("\n");
+  downloadText(csv, `sales-${app.CURMONTH}.csv`);
 }

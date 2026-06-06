@@ -1,10 +1,11 @@
 export const LOCATIONS = ["Dilshad Garden","Patparganj","Sec-5 Noida","Sec-63, Noida","Sec-140, Noida","Ecotech","Surajpur, Gr Noida","Jewar","Dadri"];
-export const DESIGNATIONS = ["Accessories Unit Incharge","Billing Incharge","Store Incharge","Store Executive","Sr Technical Executive","Technical Executive","HSRP Technication","Accessoires Sale Executive"];
+export const DESIGNATIONS = ["Accessories Unit Incharge","Billing Incharge","Store Incharge","Store Executive","Sr Technical Executive","Technical Executive","HSRP Technication","Accessoires Sale Executive", "Customer Advisor"];
 export const MODELS = ["Nexon","Punch","Tiago","Tigor","Altroz","Curvv","Harrier","Safari","Sierra","Nexon EV","Punch EV","Tiago EV","Tigor EV","Harrier EV","Curvv EV"];
-export const SALE_TYPES = ["Showroom","Counter"];
+export const SALE_TYPES = ["Showroom","Counter","Workshop","BND","Gatepass"];
 export const FOC_CATEGORIES = ["General","Listed","Marriage Car","Staff","Management Approval"];
-export const ZERO_REASONS = ["Not Interested","Marriage Car","Customer Says Next Service","Last Month Retail Case","Budget Constraint","Commercial / Fleet","Other"];
+export const ZERO_REASONS = ["Marriage Car","Customer has own accessories shop","Price/Budget Issue","Will Plan on 1st Service","Company Case","Other - Manual Feed"];
 export const FOC_REASONS  = ["Leasing Car","CSD Case","Old Customer Reference Case","Due to Some issue on the car","TML Reference","Due to Discount Control","Due to Other Dealer Deal","Other - Manual Feed"];
+export const VAS_NAMES    = ["PPF","Ceramic Coating","Under Body Coating","Teflon Coating","IPP-Cavity","Silencer Coating","Engine Coating","Rodent"];
 export const ATT_STATUS = ["Present","Absent","Week Off","Leave","Half Day","Late Coming"];
 
 export const TL_META = {

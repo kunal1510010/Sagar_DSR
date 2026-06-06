@@ -7,8 +7,8 @@ export function renderDash(){
   const teams = groupBy(rows,"tl");
   const redZone = Object.entries(teams).map(([tl,rs])=>({tl,...agg(rs)}))
     .filter(t=>t.zeroPct>=40 && t.cars>=3).sort((x,y)=>y.zeroPct-x.zeroPct);
-  const topCA = Object.entries(groupBy(rows,"cp")).map(([cp,rs])=>({cp,...agg(rs)}))
-    .sort((x,y)=>y.paid-x.paid).slice(0,6);
+  const topTL = Object.entries(groupBy(rows,"tl")).map(([tl,rs])=>({tl,...agg(rs)}))
+    .sort((x,y)=>y.paid-x.paid);
   const byLoc = Object.entries(groupBy(rows,"loc")).map(([loc,rs])=>({loc,...agg(rs)})).sort((x,y)=>y.paid-x.paid);
   const att = attendanceToday();
 
@@ -25,32 +25,38 @@ export function renderDash(){
     <div class="kpi"><div class="lab">Paid / Car</div><div class="val">${fmtINR(a.paidPerCar)}</div><div class="sub">average revenue</div></div>
     <div class="kpi bad"><div class="lab">Zero Cars</div><div class="val">${a.zero}</div><div class="sub">${fmtN(a.zeroPct)}% of deliveries</div></div>
     <div class="kpi warn"><div class="lab">Extended Warranty</div><div class="val">${a.ew}</div><div class="sub">EW attached</div></div>
+    <div class="kpi ok"><div class="lab">VAS Billing</div><div class="val">${fmtINR(a.vasBilling)}</div><div class="sub">value-added services</div></div>
   </div>
 
-  <div class="row2">
-    <div class="panel">
-      <div class="ph"><h3>Sales by Location</h3></div>
-      <div class="pb flush"><div class="tblwrap"><table>
-        <thead><tr><th>Location</th><th>Cars</th><th>Paid</th><th>Paid/Car</th><th>Zero %</th></tr></thead>
-        <tbody>${byLoc.length?byLoc.map(l=>`<tr>
-          <td><b>${esc(l.loc)}</b></td><td class="num">${l.cars}</td>
-          <td class="num">${fmtINR(l.paid)}</td><td class="num">${fmtINR(l.paidPerCar)}</td>
-          <td><div style="display:flex;align-items:center;gap:8px"><div class="bar"><i class="${l.zeroPct>=40?'bad':l.zeroPct>=20?'warn':'ok'}" style="width:${Math.min(l.zeroPct,100)}%"></i></div><span class="num">${fmtN(l.zeroPct)}%</span></div></td>
-        </tr>`).join(""):`<tr><td colspan=5 class="empty"><b>No sales yet</b>Add entries under Daily Sales</td></tr>`}</tbody>
-      </table></div></div>
-    </div>
-    
+  <div class="panel" style="margin-bottom:16px">
+    <div class="ph"><h3>Sales by Location</h3></div>
+    <div class="pb flush"><div class="tblwrap"><table>
+      <thead><tr><th>#</th><th>Location</th><th>Cars</th><th>Paid</th><th>Total FOC</th><th>EW</th><th>VAS Amount</th><th>Paid/Car</th></tr></thead>
+      <tbody>${byLoc.length?byLoc.map((l,i)=>`<tr>
+        <td><span class="tag ${i===0?'pri':'gray'}">${i+1}</span></td>
+        <td><b>${esc(l.loc)}</b></td><td class="num">${l.cars}</td>
+        <td class="num">${fmtINR(l.paid)}</td>
+        <td class="num">${l.foc?fmtINR(l.foc):"—"}</td>
+        <td class="num">${l.ew||"—"}</td>
+        <td class="num">${l.vasBilling?fmtINR(l.vasBilling):"—"}</td>
+        <td class="num">${fmtINR(l.paidPerCar)}</td>
+      </tr>`).join(""):`<tr><td colspan=8 class="empty"><b>No sales yet</b>Add entries under Daily Sales</td></tr>`}</tbody>
+    </table></div></div>
   </div>
 
   <div class="panel" style="margin-top:16px">
-    <div class="ph"><h3>Top Performers (Paid Accessories)</h3></div>
+    <div class="ph"><h3>Team Leader Performance</h3></div>
     <div class="pb flush"><div class="tblwrap"><table>
-      <thead><tr><th>#</th><th>Sales Person (CA)</th><th>Cars</th><th>Paid</th><th>Paid/Car</th><th>Zero</th></tr></thead>
-      <tbody>${topCA.length?topCA.map((c,i)=>`<tr>
+      <thead><tr><th>#</th><th>Team Leader</th><th>Cars</th><th>Paid</th><th>Total FOC</th><th>EW</th><th>VAS Amount</th><th>Paid/Car</th></tr></thead>
+      <tbody>${topTL.length?topTL.map((t,i)=>`<tr>
         <td><span class="tag ${i===0?'pri':'gray'}">${i+1}</span></td>
-        <td><b>${esc(c.cp)}</b></td><td class="num">${c.cars}</td>
-        <td class="num">${fmtINR(c.paid)}</td><td class="num">${fmtINR(c.paidPerCar)}</td>
-        <td class="num">${c.zero}</td></tr>`).join(""):`<tr><td colspan=6 class="empty">No data</td></tr>`}</tbody>
+        <td><b>${esc(t.tl)}</b></td><td class="num">${t.cars}</td>
+        <td class="num">${fmtINR(t.paid)}</td>
+        <td class="num">${t.foc?fmtINR(t.foc):"—"}</td>
+        <td class="num">${t.ew||"—"}</td>
+        <td class="num">${t.vasBilling?fmtINR(t.vasBilling):"—"}</td>
+        <td class="num">${fmtINR(t.paidPerCar)}</td>
+      </tr>`).join(""):`<tr><td colspan=8 class="empty">No data</td></tr>`}</tbody>
     </table></div></div>
   </div>`;
 }
