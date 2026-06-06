@@ -5,7 +5,7 @@ import { closeModal } from './modal.js';
 import { go, buildNav, registerRenderer, monthLabel, setLoc, setMonth } from './nav.js';
 
 import { renderDash }     from './pages/dashboard.js';
-import { renderSales, renderSalesTable, openSaleForm, onCpPick, onPaidChange, saveSale } from './pages/sales.js';
+import { renderSales, renderSalesTable, openSaleForm, onCpPick, onPaidChange, onFocChange, onFocReasonChange, saveSale } from './pages/sales.js';
 import { renderStock, renderStockTbl, openStockForm, onKind, saveStock }                 from './pages/stock.js';
 import { renderAttend, statusColor, mark, markAll }                                       from './pages/attendance.js';
 import { renderReports, renderRepTable, exportReport }                                    from './pages/reports.js';
@@ -43,10 +43,12 @@ window.logout   = logout;
 window.closeModal = closeModal;
 
 // sales
-window.renderSalesTable = renderSalesTable;
-window.openSaleForm     = openSaleForm;
-window.onCpPick         = onCpPick;
-window.onPaidChange     = onPaidChange;
+window.renderSalesTable  = renderSalesTable;
+window.openSaleForm      = openSaleForm;
+window.onCpPick          = onCpPick;
+window.onPaidChange      = onPaidChange;
+window.onFocChange       = onFocChange;
+window.onFocReasonChange = onFocReasonChange;
 
 // stock
 window.renderStockTbl = renderStockTbl;

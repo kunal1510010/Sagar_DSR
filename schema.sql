@@ -44,26 +44,44 @@ CREATE TABLE IF NOT EXISTS sales (
   total       NUMERIC DEFAULT 0,
   ew          BOOLEAN DEFAULT false,
   zero        BOOLEAN DEFAULT false,
-  zero_reason TEXT
+  zero_reason TEXT,
+  foc_reason  TEXT
 );
 CREATE INDEX IF NOT EXISTS idx_sales_date ON sales(date);
 CREATE INDEX IF NOT EXISTS idx_sales_tl   ON sales(tl);
 CREATE INDEX IF NOT EXISTS idx_sales_cp   ON sales(cp);
+ALTER TABLE sales ADD COLUMN IF NOT EXISTS foc_reason TEXT;
 
 CREATE TABLE IF NOT EXISTS stock (
-  id       TEXT PRIMARY KEY,
-  kind     TEXT,            -- 'Purchase' | 'Transfer'
-  date     DATE NOT NULL,
-  src      TEXT,            -- "from"
-  dst      TEXT,            -- "to"
-  part_no  TEXT,
-  descr    TEXT,
-  qty      INTEGER DEFAULT 1,
-  acc_w    TEXT,
-  cate     TEXT,
-  remarks  TEXT
+  id                TEXT PRIMARY KEY,
+  kind              TEXT,            -- 'Purchase' | 'Transfer'
+  date              TIMESTAMP NOT NULL,
+  src               TEXT,            -- "from"
+  dst               TEXT,            -- "to"
+  part_no           TEXT,
+  descr             TEXT,
+  qty               INTEGER DEFAULT 1,
+  acc_w             TEXT,
+  cate              TEXT,
+  remarks           TEXT,
+  location          TEXT,
+  part_order_desc   TEXT,
+  delivery_status   TEXT DEFAULT 'No'
 );
 CREATE INDEX IF NOT EXISTS idx_stock_date ON stock(date);
+
+-- live migrations for existing databases
+DO $$ BEGIN
+  IF EXISTS (
+    SELECT 1 FROM information_schema.columns
+    WHERE table_name='stock' AND column_name='date' AND data_type='date'
+  ) THEN
+    ALTER TABLE stock ALTER COLUMN date TYPE TIMESTAMP USING date::timestamp;
+  END IF;
+END $$;
+ALTER TABLE stock ADD COLUMN IF NOT EXISTS location         TEXT;
+ALTER TABLE stock ADD COLUMN IF NOT EXISTS part_order_desc  TEXT;
+ALTER TABLE stock ADD COLUMN IF NOT EXISTS delivery_status  TEXT DEFAULT 'No';
 
 CREATE TABLE IF NOT EXISTS attendance (
   date    DATE NOT NULL,

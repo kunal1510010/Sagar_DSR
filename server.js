@@ -98,12 +98,21 @@ app.get("/api/bootstrap", auth, async (req, res) => {
 });
 
 /* ---------------- mappers (db snake_case -> frontend camelCase) ---------------- */
-const d = (x) => (x instanceof Date ? x.toISOString().slice(0, 10) : (x || "").slice ? x.slice(0, 10) : x);
+const d  = (x) => (x instanceof Date ? x.toISOString().slice(0, 10) : (x || "").slice ? x.slice(0, 10) : x);
+const dt = (x) => {
+  if (!x) return "";
+  if (x instanceof Date) return x.toISOString().slice(0, 16);
+  const s = String(x);
+  if (s.length <= 10) return s + "T00:00";
+  return s.slice(0, 16).replace(" ", "T");
+};
 const mapSale = (r) => ({ id: r.id, date: d(r.date), loc: r.loc, model: r.model, chassis: r.chassis,
   customer: r.customer, phone: r.phone, cp: r.cp, tl: r.tl, saleType: r.sale_type, accWork: r.acc_work,
-  bookNo: r.book_no, paid: +r.paid, foc: +r.foc, total: +r.total, ew: r.ew, zero: r.zero, zeroReason: r.zero_reason || "" });
-const mapStock = (r) => ({ id: r.id, kind: r.kind, date: d(r.date), from: r.src, to: r.dst, partNo: r.part_no,
-  desc: r.descr, qty: r.qty, accW: r.acc_w, cate: r.cate, remarks: r.remarks });
+  bookNo: r.book_no, paid: +r.paid, foc: +r.foc, total: +r.total, ew: r.ew, zero: r.zero,
+  zeroReason: r.zero_reason || "", focReason: r.foc_reason || "" });
+const mapStock = (r) => ({ id: r.id, kind: r.kind, date: dt(r.date), from: r.src, to: r.dst, partNo: r.part_no,
+  desc: r.descr, qty: r.qty, accW: r.acc_w, cate: r.cate, remarks: r.remarks,
+  location: r.location || "", partOrderDesc: r.part_order_desc || "", deliveryStatus: r.delivery_status || "No" });
 
 /* ---------------- SALES ---------------- */
 app.get("/api/sales", auth, async (req, res) => {
@@ -114,17 +123,18 @@ app.get("/api/sales", auth, async (req, res) => {
 function saleParams(b, id) {
   const paid = +b.paid || 0, foc = +b.foc || 0;
   return [id, b.date, b.loc, b.model, b.chassis, b.customer, b.phone, b.cp, b.tl, b.saleType,
-    b.accWork, b.bookNo, paid, foc, paid + foc, !!b.ew, paid === 0, paid === 0 ? (b.zeroReason || "") : null];
+    b.accWork, b.bookNo, paid, foc, paid + foc, !!b.ew, paid === 0, paid === 0 ? (b.zeroReason || "") : null,
+    foc > 0 ? (b.focReason || null) : null];
 }
 app.post("/api/sales", auth, async (req, res) => {
   const id = req.body.id || uid();
-  const { rows } = await q(`INSERT INTO sales(id,date,loc,model,chassis,customer,phone,cp,tl,sale_type,acc_work,book_no,paid,foc,total,ew,zero,zero_reason)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18) RETURNING *`, saleParams(req.body, id));
+  const { rows } = await q(`INSERT INTO sales(id,date,loc,model,chassis,customer,phone,cp,tl,sale_type,acc_work,book_no,paid,foc,total,ew,zero,zero_reason,foc_reason)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19) RETURNING *`, saleParams(req.body, id));
   res.json(mapSale(rows[0]));
 });
 app.put("/api/sales/:id", auth, async (req, res) => {
   const { rows } = await q(`UPDATE sales SET date=$2,loc=$3,model=$4,chassis=$5,customer=$6,phone=$7,cp=$8,tl=$9,
-    sale_type=$10,acc_work=$11,book_no=$12,paid=$13,foc=$14,total=$15,ew=$16,zero=$17,zero_reason=$18 WHERE id=$1 RETURNING *`,
+    sale_type=$10,acc_work=$11,book_no=$12,paid=$13,foc=$14,total=$15,ew=$16,zero=$17,zero_reason=$18,foc_reason=$19 WHERE id=$1 RETURNING *`,
     saleParams(req.body, req.params.id));
   if (!rows[0]) return res.status(404).json({ error: "Not found" });
   res.json(mapSale(rows[0]));
@@ -137,16 +147,17 @@ app.get("/api/stock", auth, async (req, res) => {
   res.json(rows.map(mapStock));
 });
 function stockParams(b, id) {
-  return [id, b.kind, b.date, b.from, b.to, b.partNo, b.desc, +b.qty || 1, b.accW, b.cate, b.remarks];
+  return [id, b.kind, b.date, b.from, b.to, b.partNo, b.desc, +b.qty || 1, b.accW, b.cate, b.remarks,
+          b.location || null, b.partOrderDesc || null, b.deliveryStatus || "No"];
 }
 app.post("/api/stock", auth, async (req, res) => {
-  const { rows } = await q(`INSERT INTO stock(id,kind,date,src,dst,part_no,descr,qty,acc_w,cate,remarks)
-    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11) RETURNING *`, stockParams(req.body, req.body.id || uid()));
+  const { rows } = await q(`INSERT INTO stock(id,kind,date,src,dst,part_no,descr,qty,acc_w,cate,remarks,location,part_order_desc,delivery_status)
+    VALUES($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14) RETURNING *`, stockParams(req.body, req.body.id || uid()));
   res.json(mapStock(rows[0]));
 });
 app.put("/api/stock/:id", auth, async (req, res) => {
-  const { rows } = await q(`UPDATE stock SET kind=$2,date=$3,src=$4,dst=$5,part_no=$6,descr=$7,qty=$8,acc_w=$9,cate=$10,remarks=$11
-    WHERE id=$1 RETURNING *`, stockParams(req.body, req.params.id));
+  const { rows } = await q(`UPDATE stock SET kind=$2,date=$3,src=$4,dst=$5,part_no=$6,descr=$7,qty=$8,acc_w=$9,cate=$10,remarks=$11,
+    location=$12,part_order_desc=$13,delivery_status=$14 WHERE id=$1 RETURNING *`, stockParams(req.body, req.params.id));
   if (!rows[0]) return res.status(404).json({ error: "Not found" });
   res.json(mapStock(rows[0]));
 });

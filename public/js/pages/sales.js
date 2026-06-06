@@ -1,6 +1,6 @@
 import { app, can, monthSales } from '../state.js';
 import { esc, fmtINR, today, uid } from '../utils.js';
-import { MODELS, SALE_TYPES, ZERO_REASONS } from '../constants.js';
+import { MODELS, SALE_TYPES, ZERO_REASONS, FOC_REASONS } from '../constants.js';
 import { api } from '../api.js';
 import { modal, closeModal } from '../modal.js';
 import { monthPicker, locFilterCtl, buildNav } from '../nav.js';
@@ -48,7 +48,11 @@ export function renderSalesTable(){
 
 export function openSaleForm(id){
   const s = id ? app.DB.sales.find(x=>x.id===id) : null;
-  const rosterOpts = app.DB.roster.map(r=>`<option value="${esc(r.name)}" data-tl="${esc(r.tl)}" data-loc="${esc(r.loc)}" ${s&&s.cp===r.name?"selected":""}>${esc(r.name)} — ${esc(r.tl)}</option>`).join("");
+  const rosterOpts = app.DB.roster.map(r=>`<option value="${esc(r.name)}" data-tl="${esc(r.tl)}" data-loc="${esc(r.loc)}" ${s&&s.cp===r.name?"selected":""}>${esc(r.name)}</option>`).join("");
+  // determine FOC reason dropdown state for edit
+  const isOtherFoc = s && s.focReason && !FOC_REASONS.includes(s.focReason);
+  const focReasonSel = isOtherFoc ? "Other - Manual Feed" : (s ? (s.focReason||"") : "");
+  const focOtherVal  = isOtherFoc ? esc(s.focReason) : "";
   modal(`${s?"Edit":"New"} Delivery Entry`, `
     <div class="formgrid ff">
       <div><label>Date of Delivery</label><input class="inp" id="f_date" type="date" value="${s?s.date:today()}"></div>
@@ -63,8 +67,18 @@ export function openSaleForm(id){
       <div><label>Acc. Work No</label><input class="inp" id="f_accw" value="${s?esc(s.accWork):""}"></div>
       <div><label>Book No</label><input class="inp" id="f_book" value="${s?esc(s.bookNo):""}"></div>
       <div><label>Accessories Paid (₹)</label><input class="inp" id="f_paid" type="number" min="0" value="${s?s.paid:0}" oninput="onPaidChange()"></div>
-      <div><label>FOC Value (₹)</label><input class="inp" id="f_foc" type="number" min="0" value="${s?s.foc:0}"></div>
+      <div><label>FOC Value (₹)</label><input class="inp" id="f_foc" type="number" min="0" value="${s?s.foc:0}" oninput="onFocChange()"></div>
       <div><label>Extended Warranty?</label><select id="f_ew"><option value="">No</option><option value="1" ${s&&s.ew?"selected":""}>Yes</option></select></div>
+    </div>
+    <div id="focBlock" class="ff" style="margin-top:14px;${s&&+s.foc>0?'':'display:none'}">
+      <div class="section-note" style="background:var(--warn-soft);border-color:#f0d080;color:var(--warn)">
+        FOC goods assigned — select the reason:</div>
+      <select id="f_focReason" onchange="onFocReasonChange()" style="margin-top:8px">
+        <option value="" ${!focReasonSel?'selected':''}>— Select reason —</option>
+        ${FOC_REASONS.map(r=>`<option value="${esc(r)}" ${focReasonSel===r?'selected':''}>${esc(r)}</option>`).join("")}
+      </select>
+      <input class="inp" id="f_focOther" style="margin-top:8px;${focReasonSel==='Other - Manual Feed'?'':'display:none'}"
+        placeholder="Describe the reason…" value="${focOtherVal}">
     </div>
     <div id="zeroBlock" class="ff" style="margin-top:14px;${(s&&s.zero)?'':'display:none'}">
       <div class="section-note" style="background:var(--bad-soft);border-color:#f3c4c9;color:var(--bad)">
@@ -90,15 +104,29 @@ export function onPaidChange(){
   document.querySelector("#zeroBlock").style.display = (p===0) ? "block" : "none";
 }
 
+export function onFocChange(){
+  const f = +document.querySelector("#f_foc").value||0;
+  document.querySelector("#focBlock").style.display = (f>0) ? "block" : "none";
+}
+
+export function onFocReasonChange(){
+  const v = document.querySelector("#f_focReason").value;
+  document.querySelector("#f_focOther").style.display = (v==="Other - Manual Feed") ? "block" : "none";
+}
+
 export async function saveSale(id){
   const g = x => document.querySelector("#"+x).value;
   const paid = +g("f_paid")||0, foc = +g("f_foc")||0;
   if(!g("f_cust").trim()){ toast("Customer name is required","bad"); return; }
   const zero = paid===0;
+  const focReasonRaw = g("f_focReason");
+  const focReason = foc>0
+    ? (focReasonRaw==="Other - Manual Feed" ? g("f_focOther").trim() : focReasonRaw)
+    : "";
   const rec = { id:id||uid(), date:g("f_date"), model:g("f_model"), saleType:g("f_type"),
     cp:g("f_cp"), tl:g("f_tl"), loc:g("f_loc"), customer:g("f_cust").trim(), phone:g("f_phone").trim(),
     chassis:g("f_chassis").trim(), accWork:g("f_accw").trim(), bookNo:g("f_book").trim(),
-    paid, foc, total:paid+foc, ew:!!g("f_ew"), zero, zeroReason: zero? g("f_zr"):"" };
+    paid, foc, total:paid+foc, ew:!!g("f_ew"), zero, zeroReason: zero? g("f_zr"):"", focReason };
   try{
     const saved = id ? await api("/sales/"+id,{method:"PUT",body:rec})
                      : await api("/sales",{method:"POST",body:rec});

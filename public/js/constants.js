@@ -4,6 +4,7 @@ export const MODELS = ["Nexon","Punch","Tiago","Tigor","Altroz","Curvv","Harrier
 export const SALE_TYPES = ["Showroom","Counter"];
 export const FOC_CATEGORIES = ["General","Listed","Marriage Car","Staff","Management Approval"];
 export const ZERO_REASONS = ["Not Interested","Marriage Car","Customer Says Next Service","Last Month Retail Case","Budget Constraint","Commercial / Fleet","Other"];
+export const FOC_REASONS  = ["Leasing Car","CSD Case","Old Customer Reference Case","Due to Some issue on the car","TML Reference","Due to Discount Control","Due to Other Dealer Deal","Other - Manual Feed"];
 export const ATT_STATUS = ["Present","Absent","Week Off","Leave","Half Day","Late Coming"];
 
 export const TL_META = {
