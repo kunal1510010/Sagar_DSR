@@ -85,12 +85,21 @@ export function openSaleForm(id){
       <input class="inp" id="f_focOther" style="margin-top:8px;${focReasonSel==='Other - Manual Feed'?'':'display:none'}"
         placeholder="Describe the reason…" value="${focOtherVal}">
     </div>
-    <div class="formgrid ff" style="margin-top:14px">
-      <div><label>VAS Name</label><select id="f_vasName">
-        <option value="" ${!s||!s.vasName?'selected':''}>— None —</option>
-        ${VAS_NAMES.map(v=>`<option value="${esc(v)}" ${s&&s.vasName===v?'selected':''}>${esc(v)}</option>`).join("")}
-      </select></div>
-      <div><label>VAS Billing Amount (₹)</label><input class="inp" id="f_vasBilling" type="number" min="0" value="${s?s.vasBilling:0}"></div>
+    <div class="ff" style="margin-top:14px">
+      <label>VAS Items</label>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">
+        ${(()=>{ const sel=(s&&s.vasName)?s.vasName.split(",").map(x=>x.trim()):[];
+          return VAS_NAMES.map(v=>{ const on=sel.includes(v);
+            return `<span data-vas="${esc(v)}" data-sel="${on?'1':''}"
+              onclick="var o=this.dataset.sel!=='1';this.dataset.sel=o?'1':'';this.style.background=o?'var(--pri)':'#f0f3f8';this.style.color=o?'#fff':'var(--fg)';this.style.borderColor=o?'var(--pri)':'var(--line)'"
+              style="padding:6px 16px;border-radius:20px;cursor:pointer;font-size:13px;font-weight:500;user-select:none;transition:background .15s,color .15s,border-color .15s;border:1.5px solid ${on?'var(--pri)':'var(--line)'};background:${on?'var(--pri)':'#f0f3f8'};color:${on?'#fff':'var(--fg)'}"
+              >${esc(v)}</span>`;
+          }).join(""); })()}
+      </div>
+    </div>
+    <div class="ff" style="margin-top:10px">
+      <label>VAS Billing Amount (₹)</label>
+      <input class="inp" id="f_vasBilling" type="number" min="0" value="${s?s.vasBilling:0}" style="max-width:220px">
     </div>
     <div id="zeroBlock" class="ff" style="margin-top:14px;${(s&&s.zero)?'':'display:none'}">
       <div class="section-note" style="background:var(--bad-soft);border-color:#f3c4c9;color:var(--bad)">
@@ -148,7 +157,7 @@ export async function saveSale(id){
   const focReason = foc>0
     ? (focReasonRaw==="Other - Manual Feed" ? g("f_focOther").trim() : focReasonRaw)
     : "";
-  const vasName = g("f_vasName");
+  const vasName = [...document.querySelectorAll('[data-vas]')].filter(c=>c.dataset.sel==='1').map(c=>c.dataset.vas).join(",");
   const vasBilling = +g("f_vasBilling")||0;
   const rec = { id:id||uid(), date:g("f_date"), model:g("f_model"), saleType:g("f_type"),
     cp:g("f_cp"), tl:g("f_tl"), loc:g("f_loc"), customer:g("f_cust").trim(), phone:g("f_phone").trim(),

@@ -26,22 +26,24 @@ export function renderRepTable(){
   if(app.repTab==="ca"){
     data = Object.entries(groupBy(rows,"cp")).map(([cp,rs])=>{const a=agg(rs);const tl=rs[0].tl;const loc=rs[0].loc;return{name:cp,tl,loc,...a};})
       .sort((x,y)=>y.paid-x.paid);
-    head = `<th>Sales Person</th><th>Team Leader</th><th>Loc</th><th>Cars</th><th>Paid</th><th>FOC</th><th>Paid/Car</th><th>EW</th><th>Zero %</th>`;
+    head = `<th>Sales Person</th><th>Team Leader</th><th>Loc</th><th>Cars</th><th>Paid</th><th>FOC</th><th>Paid/Car</th><th>EW</th><th>VAS Billing</th><th>Ceramic</th><th>Zero %</th>`;
     body = data.map(d=>rowFor(d,d.name,[d.tl,d.loc])).join("");
   } else if(app.repTab==="tl"){
     data = Object.entries(groupBy(rows,"tl")).map(([tl,rs])=>{const a=agg(rs);const loc=TL_META[tl]?TL_META[tl].loc:rs[0].loc;const team=new Set(rs.map(r=>r.cp)).size;return{name:tl,loc,team,...a};})
       .sort((x,y)=>y.paid-x.paid);
-    head = `<th>Team Leader</th><th>Loc</th><th>Team Size</th><th>Cars</th><th>Paid</th><th>FOC</th><th>Paid/Car</th><th>EW</th><th>Zero %</th>`;
+    head = `<th>Team Leader</th><th>Loc</th><th>Team Size</th><th>Cars</th><th>Paid</th><th>FOC</th><th>Paid/Car</th><th>EW</th><th>VAS Billing</th><th>Ceramic</th><th>Zero %</th>`;
     body = data.map(d=>`<tr><td><b>${esc(d.name)}</b></td><td>${esc(d.loc)}</td><td class="num">${d.team}</td>
       <td class="num">${d.cars}</td><td class="num">${fmtINR(d.paid)}</td><td class="num">${fmtINR(d.foc)}</td>
-      <td class="num">${fmtINR(d.paidPerCar)}</td><td class="num">${d.ew}</td>${zeroCell(d.zeroPct)}</tr>`).join("");
+      <td class="num">${fmtINR(d.paidPerCar)}</td><td class="num">${d.ew}</td>
+      <td class="num">${fmtINR(d.vasBilling)}</td><td class="num">${d.ceramic||"—"}</td>${zeroCell(d.zeroPct)}</tr>`).join("");
   } else {
     data = Object.entries(groupBy(rows,"model")).map(([m,rs])=>{const a=agg(rs);return{name:m,...a};})
       .sort((x,y)=>y.cars-x.cars);
-    head = `<th>Model (PPL)</th><th>Cars</th><th>Paid</th><th>FOC</th><th>Paid/Car</th><th>Zero %</th>`;
+    head = `<th>Model (PPL)</th><th>Cars</th><th>Paid</th><th>FOC</th><th>Paid/Car</th><th>VAS Billing</th><th>Ceramic</th><th>Zero %</th>`;
     body = data.map(d=>`<tr><td><b>${esc(d.name)}</b></td><td class="num">${d.cars}</td>
       <td class="num">${fmtINR(d.paid)}</td><td class="num">${fmtINR(d.foc)}</td>
-      <td class="num">${fmtINR(d.paidPerCar)}</td>${zeroCell(d.zeroPct)}</tr>`).join("");
+      <td class="num">${fmtINR(d.paidPerCar)}</td><td class="num">${fmtINR(d.vasBilling)}</td>
+      <td class="num">${d.ceramic||"—"}</td>${zeroCell(d.zeroPct)}</tr>`).join("");
   }
   window._repData = data;
   document.querySelector("#repTbl").innerHTML=`<div class="tblwrap"><table><thead><tr>${head}</tr></thead>
@@ -51,7 +53,8 @@ export function renderRepTable(){
 function rowFor(d, name, extra){
   return `<tr><td><b>${esc(name)}</b></td>${extra.map(e=>`<td>${esc(e)}</td>`).join("")}
     <td class="num">${d.cars}</td><td class="num">${fmtINR(d.paid)}</td><td class="num">${fmtINR(d.foc)}</td>
-    <td class="num">${fmtINR(d.paidPerCar)}</td><td class="num">${d.ew}</td>${zeroCell(d.zeroPct)}</tr>`;
+    <td class="num">${fmtINR(d.paidPerCar)}</td><td class="num">${d.ew}</td>
+    <td class="num">${fmtINR(d.vasBilling)}</td><td class="num">${d.ceramic||"—"}</td>${zeroCell(d.zeroPct)}</tr>`;
 }
 
 function zeroCell(p){
