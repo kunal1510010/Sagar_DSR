@@ -8,6 +8,7 @@ export const app = {
   TODAY_ATT: { rows: [] },
   CURMONTH: monthKey(today()),
   TOKEN: localStorage.getItem("sm_token") || null,
+  OLDEST_MONTH: null,
   // page-level UI state
   salesSearch: "",
   stockTab: "all",

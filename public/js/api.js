@@ -20,6 +20,7 @@ export async function loadBootstrap(){
   app.DB.roster = b.roster||[]; app.DB.sales = b.sales||[]; app.DB.stock = b.stock||[];
   app.DB.offers = b.offers||[]; app.DB.users = b.users||[];
   app.DB.attendance = []; app.TODAY_ATT.rows = b.todayAttendance||[];
+  app.OLDEST_MONTH = b.oldestMonth || app.CURMONTH;
 }
 
 export async function loadMonth(m){

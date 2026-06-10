@@ -79,13 +79,14 @@ app.get("/api/bootstrap", auth, async (req, res) => {
   const sp = [month]; const sScope = salesScope(me, sp);
   const stp = [month]; const stScope = me.role === "admin" ? "" : ""; // stock visible to all staff
 
-  const [roster, sales, stock, offers, todayAtt, users] = await Promise.all([
+  const [roster, sales, stock, offers, todayAtt, users, oldestSale] = await Promise.all([
     q(rosterSQL, rp),
     q(`SELECT * FROM sales WHERE to_char(date,'YYYY-MM')=$1 ${sScope} ORDER BY date DESC`, sp),
     q(`SELECT * FROM stock WHERE to_char(date,'YYYY-MM')=$1 ORDER BY date DESC`, [month]),
     q("SELECT * FROM offers ORDER BY title"),
     q("SELECT code,status FROM attendance WHERE date=$1", [today]),
     me.role === "admin" ? q("SELECT id,username,name,role,tl,cp,loc,designation FROM users ORDER BY role,username") : Promise.resolve({ rows: [] }),
+    q("SELECT to_char(MIN(date),'YYYY-MM') AS oldest FROM sales"),
   ]);
   res.json({
     roster: roster.rows,
@@ -94,6 +95,7 @@ app.get("/api/bootstrap", auth, async (req, res) => {
     offers: offers.rows,
     todayAttendance: todayAtt.rows,
     users: users.rows,
+    oldestMonth: oldestSale.rows[0]?.oldest || month,
   });
 });
 

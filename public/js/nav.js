@@ -106,14 +106,7 @@ export function setLoc(v){ app.LOCF = v; go(app.PAGE); }
 
 export function monthPicker(){
   const now = new Date();
-  const curKey = now.toISOString().slice(0,7);
-  // find oldest month across all sales + stock data
-  const allKeys = [
-    ...app.DB.sales.map(s=>s.date?.slice(0,7)),
-    ...app.DB.stock.map(s=>s.date?.slice(0,7)),
-  ].filter(Boolean);
-  const oldest = allKeys.length ? allKeys.reduce((a,b)=>a<b?a:b) : curKey;
-  // generate from current month down to oldest
+  const oldest = app.OLDEST_MONTH || now.toISOString().slice(0,7);
   const months = [];
   let d = new Date(now.getFullYear(), now.getMonth(), 1);
   const floor = new Date(oldest.slice(0,4), +oldest.slice(5,7)-1, 1);
