@@ -105,11 +105,21 @@ export function locFilterCtl(){
 export function setLoc(v){ app.LOCF = v; go(app.PAGE); }
 
 export function monthPicker(){
+  const now = new Date();
+  const curKey = now.toISOString().slice(0,7);
+  // find oldest month across all sales + stock data
+  const allKeys = [
+    ...app.DB.sales.map(s=>s.date?.slice(0,7)),
+    ...app.DB.stock.map(s=>s.date?.slice(0,7)),
+  ].filter(Boolean);
+  const oldest = allKeys.length ? allKeys.reduce((a,b)=>a<b?a:b) : curKey;
+  // generate from current month down to oldest
   const months = [];
-  const d = new Date();
-  for(let i=0; i<6; i++){
-    const m = new Date(d.getFullYear(), d.getMonth()-i, 1);
-    months.push(m.toISOString().slice(0,7));
+  let d = new Date(now.getFullYear(), now.getMonth(), 1);
+  const floor = new Date(oldest.slice(0,4), +oldest.slice(5,7)-1, 1);
+  while(d >= floor){
+    months.push(d.toISOString().slice(0,7));
+    d = new Date(d.getFullYear(), d.getMonth()-1, 1);
   }
   return `<select onchange="setMonth(this.value)">${months.map(m=>`<option value="${m}" ${m===app.CURMONTH?"selected":""}>${monthLabel(m)}</option>`).join("")}</select>`;
 }
